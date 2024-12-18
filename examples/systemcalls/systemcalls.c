@@ -17,7 +17,15 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+	int status = system(cmd);	
+	if(status == 0){
+		return true;
+	}
+	else{
+		return false;
+	}		
+	
+ 	
 }
 
 /**
@@ -49,7 +57,8 @@ bool do_exec(int count, ...)
     // and may be removed
     command[count] = command[count];
 
-/*
+
+/*  
  * TODO:
  *   Execute a system command by calling fork, execv(),
  *   and wait instead of system (see LSP page 161).
@@ -58,10 +67,45 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    
 
+    				
     va_end(args);
 
-    return true;
+    int pid = fork(); //creats a new process 
+    //bool child_sucess_status = true;
+    
+    int status;
+    
+    if (pid == -1){
+        
+        // this check s for Fork failling 
+        exit(1);
+    }
+    
+    if (pid == 0){
+        
+        int execv_status = execv(command[0],command); 
+        if (execv_status == -1)
+        {
+            //child_sucess_status=false;
+            exit(1);
+        }
+
+    }else {
+        
+        //use wait here 
+        waitpid(pid,&status,0);
+
+        
+    }
+    if (status == 0)
+    {
+        return true;
+    }else{
+        return false;
+    }
+    
 }
 
 /**
@@ -83,8 +127,7 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
     command[count] = command[count];
-
-
+    va_end(args);
 /*
  * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
@@ -93,7 +136,56 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *
 */
 
-    va_end(args);
+
+    // open file, make a chidl, do execv, wait if you are not the child
+    int child_pid;
+    int status;
+
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+
+    if (fd < 0) {
+
+        perror("open");
+        abort();
+    }
+    
+    if (dup2(fd, 1) < 0) { exit(1); }
+    close(fd);
+    
+    child_pid = fork();
+
+    if (child_pid == -1)
+    {
+        exit(1);
+    }
+
+   
+
+    if (child_pid == 0){
+        
+        int execv_status = execv(command[0],command); 
+        if (execv_status == -1)
+        {
+            //child_sucess_status=false;
+            exit(1);
+        }
+
+    }else {
+        
+        //use wait here 
+        close(fd);
+        waitpid(child_pid,&status,0);
+       
+        
+    }
+    if (status == 0)
+    {
+        return true;
+    }else{
+        return false;
+    }
+
+    
 
     return true;
 }
